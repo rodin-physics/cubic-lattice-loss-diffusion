@@ -15,6 +15,22 @@ couplings = cubic_lattice(k1, k2)
 # Dynamical matrix
 DynamicalMatrix = dynamical_matrix(m, couplings)
 
+# Precalculate W
+
+if !isfile("Data/W_precalc.jld2")
+    println("Calculating W's")
+    lim = 7
+    displacements = Iterators.product([-lim:lim, -lim:lim, -lim:lim]...) |> collect |> vec
+    Ws = Vector{Matrix{Float64}}(undef, length(displacements))
+    pr = Progress(length(Ws))
+    Threads.@threads for ii in eachindex(Ws)
+        Ws[ii] = W(m, dyn_mat, 0, displacements[ii])[1]
+        next!(pr)
+    end
+
+    save_object("Data/W_precalc.jld2", Ws)
+end
+
 # BAND STRUCTURE
 Γ = [0, 0, 0]
 X = [π, 0, 0]
@@ -207,4 +223,3 @@ end
 fig
 
 save("Framework_properties.pdf", fig)
-# [r[1] for r in keys(W_dict)|>collect]|> maximum

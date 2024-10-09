@@ -58,8 +58,8 @@ function RKstep_local(current_state, ζsηs, ζsηs_dot, qs, Ωs, atoms, U, t, �
         end
     else
         phases = [exp(1im * dot(q, atom)) for atom in atoms, q in qs]
-        for ii in eachindex(ts)
-            # Threads.@threads for ii in eachindex(ts)
+        # for ii in eachindex(ts)
+        Threads.@threads for ii in eachindex(ts)
             time_phase = exp.(-1im * ts[ii] .* Ωs)
             harmonics_pos = ζsηs .* time_phase
             harmonics_vel = ζsηs_dot .* time_phase

@@ -8,6 +8,7 @@ k1 = 520                    # Nearest neighbor force constant in meV / Å²
 k2 = 170                    # Next-nearest neighbor force constant in meV / Å²
 m = 3.5                     # Lattice mass in meV * (ps / Å)²
 ħ = 0.6582119569            # Planck constant in meV * ps
+δt = 5e-3                   # Time step in ps
 
 # System size
 size_x = size_y = size_z = 50
@@ -38,13 +39,8 @@ speeds = [2, 5]
 λs = [3 / 8, 3 / 4]
 Us = [2000]
 
-# speeds = [1 / 2, 1, 2, 5]
-# λs = [3 / 8, 3 / 4, 1.5]
-# Us = [50, 2000]
-
 params = [(s, λ, U0) for s in speeds, λ in λs, U0 in Us] |> vec
 
-# for p in params
 Threads.@threads for p in params
     init_speed = p[1]
     λ = p[2]
@@ -64,10 +60,9 @@ Threads.@threads for p in params
         R_dot = [0, 0, init_speed]
 
         # Simulation parameters
-        δt = 5e-3                                   # Time step in ps
         t_max = 3 * abs(init_pos / init_speed) / 2  # Maximum time
         nPts = floor(t_max / δt) |> Int
-        # println(nPts)
+
         pos = Vector{Vector{Float64}}(undef, nPts)
         speed = Vector{Vector{Float64}}(undef, nPts)
 
@@ -102,9 +97,7 @@ Threads.@threads for p in params
 end
 
 
-
 ## FIGURES
-δt = 5e-3                                   # Time step in ps
 W_mat = W(m, dyn_mat, 0, (0, 0, 0))[1]
 
 T = diag(W_mat) |> mean
@@ -156,12 +149,8 @@ axs_deflection = [
     ) for n = 1:4
 ]
 
-axs_force = [Axis(
-    force_grid[1, n],
-    # title = L"\lambda = 3/8\mathrm{\AA}, \dot{R} = 5\mathrm{\AA/ps}",
-    ylabel = "Force (meV/Å)",
-    xlabel = "Time (ps)",
-) for n = 1:4]
+axs_force =
+    [Axis(force_grid[1, n], ylabel = "Force (meV/Å)", xlabel = "Time (ps)") for n = 1:4]
 
 for ii = 1:4
 
@@ -291,10 +280,6 @@ hideydecorations!.(axs_deflection[2:end])
 hideydecorations!.(axs_force[2:end])
 hideydecorations!.(axs_deflection[1], label = false)
 hideydecorations!.(axs_force[1], label = false)
-
-
-# hideydecorations!.(axs_deflection[2:end], ticks = false, ticklabels = false)
-# hideydecorations!.(axs_force[2:end], ticks = false, ticklabels = false)
 
 legs = [
     LineElement(color = CF_sky, linewidth = 4),
