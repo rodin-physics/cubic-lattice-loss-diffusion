@@ -24,11 +24,11 @@ if !isfile("Data/W_precalc.jld2")
     Ws = Vector{Matrix{Float64}}(undef, length(displacements))
     pr = Progress(length(Ws))
     Threads.@threads for ii in eachindex(Ws)
-        Ws[ii] = W(m, dyn_mat, 0, displacements[ii])[1]
+        Ws[ii] = W(m, DynamicalMatrix, 0, displacements[ii])[1]
         next!(pr)
     end
-
-    save_object("Data/W_precalc.jld2", Ws)
+    W_dict = Dict(zip(displacements, Ws))
+    save_object("Data/W_precalc.jld2", W_dict)
 end
 
 # BAND STRUCTURE
@@ -76,11 +76,6 @@ Threads.@threads for ħΩT in ħΩTs
     if !isfile("Data/System/Homogeneous_ħT$(ħΩT).jld2")
         disp, speed =
             homogeneous_init(ħ, m, DynamicalMatrix, ħΩT / ħ, size_x, size_y, size_z)
-        println(real(speed) |> var)
-        println(real(disp) |> var)
-
-        println(Corr_pos(ħ, m, DynamicalMatrix, ħΩT / ħ, 0, [0, 0, 0])[1][1, 1])
-        println(Corr_speed(ħ, m, DynamicalMatrix, ħΩT / ħ, 0, [0, 0, 0])[1][1, 1])
 
         save_object("Data/System/Homogeneous_ħT$(ħΩT).jld2", (disp, speed))
     end

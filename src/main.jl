@@ -4,9 +4,9 @@ using HCubature
 using JLD2
 using LinearAlgebra
 using ProgressMeter
-using QuadGK
+# using QuadGK
 using SparseArrays
-using SpecialFunctions
+# using SpecialFunctions
 
 include("full_approach.jl")
 include("time_local_approach.jl")

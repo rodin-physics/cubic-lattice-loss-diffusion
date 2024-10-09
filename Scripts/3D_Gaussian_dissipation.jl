@@ -83,7 +83,6 @@ end
 
 ## Single-particle solution
 # Get the recoil terms
-include("precalculation.jl")
 W_dict = load_object("Data/W_precalc.jld2")
 
 pos_particle = Vector{Vector{Float64}}(undef, nPts)
