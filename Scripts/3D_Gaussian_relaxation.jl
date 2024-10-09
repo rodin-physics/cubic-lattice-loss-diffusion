@@ -18,9 +18,8 @@ R_mid = [(size_x + 1) / 2 - 1, (size_y + 1) / 2 - 1, (size_z + 1) / 2 - 1] .* a
 R_edge = [(size_x + 0) / 2 - 1, (size_y + 0) / 2 - 1, (size_z + 1) / 2 - 1] .* a
 
 λ = 3 / 4
-# λ = 1 / sqrt(3)
 U0 = 2000
-# U(1.5)*2
+
 m_unrelaxed = relaxation(sys, R_mid, λ, U0, 0)
 e_unrelaxed = relaxation(sys, R_edge, λ, U0, 0)
 
