@@ -7,7 +7,7 @@ function pos_eff(atoms, r, r_dot, R, R_dot, U, loss_mat)
     gradient_r = [ForwardDiff.gradient(U, x .- R) for x in r]
     # The correction to nth position is given by ∑ₖ Wₙ₋ₖ grad_r[k]
     r_corr = [
-        sum([
+        -sum([
             get(W_dict, atoms[n] .- atoms[k], nothing) * gradient_r[k] for
             k in eachindex(atoms)
         ]) for n in eachindex(atoms)
@@ -24,7 +24,7 @@ function pos_eff(atoms, r, r_dot, R, R_dot, U, loss_mat)
             ) + ForwardDiff.hessian(R -> sum([U(R - x) for x in r]), R) * R_dot
         ) |> real
 
-    r_eff = r .- r_corr
+    r_eff = r .+ r_corr
     R_eff = R + R_corr
 
     return (r_eff, R_eff)

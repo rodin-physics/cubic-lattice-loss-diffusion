@@ -8,7 +8,7 @@ k1 = 520                    # Nearest neighbor force constant in meV / Å²
 k2 = 170                    # Next-nearest neighbor force constant in meV / Å²
 m = 3.5                     # Lattice mass in meV * (ps / Å)²
 ħ = 0.6582119569            # Planck constant in meV * ps
-δt = 5e-3                   # Time step in ps
+δt = 2.5e-3                 # Time step in ps
 
 # System size
 size_x = size_y = size_z = 50
@@ -35,9 +35,9 @@ loss_mat = Loss_Matrix(a, m, dyn_mat_small)[1] |> real
 sys = system(size_x, size_y, size_z, couplings)
 
 # Simulation parameters
-speeds = [2, 5]
-λs = [1 / 2, 1]
-Us = [2000]
+speeds = [2, 10, 20, 30]
+λs = [1 / 2, 1 / 5]
+Us = [14000]
 
 params = [(s, λ, U0) for s in speeds, λ in λs, U0 in Us] |> vec
 
@@ -58,7 +58,7 @@ Threads.@threads for p in params
         atoms = [(1, 1, n) for n = 1:1]
 
         # Initial conditions
-        init_pos = -12 * λ
+        init_pos = -24 * λ
         R = [0, 0, init_pos]
         R_dot = [0, 0, init_speed]
 
@@ -88,6 +88,7 @@ Threads.@threads for p in params
             speed_atom[ii] = current_state[2][1:3]
             pos[ii] = current_state[3]
             speed[ii] = current_state[4]
+            GC.safepoint()
         end
 
         save_object(
@@ -105,40 +106,40 @@ T = diag(W_mat) |> mean
 L = diag(loss_mat) |> mean
 
 data = [
-    "Data/Reflection/Full_Reflection_Yukawa_U2000_λ0.5_init_speed5.jld2",
-    "Data/Reflection/Full_Reflection_Yukawa_U2000_λ1.0_init_speed5.jld2",
-    "Data/Reflection/Full_Reflection_Yukawa_U2000_λ0.5_init_speed2.jld2",
-    "Data/Reflection/Full_Reflection_Yukawa_U2000_λ1.0_init_speed2.jld2",
+    "Data/Reflection/Full_Reflection_Yukawa_U14000_λ0.2_init_speed10.jld2",
+    "Data/Reflection/Full_Reflection_Yukawa_U14000_λ0.5_init_speed10.jld2",
+    "Data/Reflection/Full_Reflection_Yukawa_U14000_λ0.2_init_speed2.jld2",
+    "Data/Reflection/Full_Reflection_Yukawa_U14000_λ0.5_init_speed2.jld2",
 ]
 
-λs = [1 / 2, 1, 1 / 2, 1]
+λs = [1 / 5, 1 / 2, 1 / 5, 1 / 2]
 
 set_theme!(CF_theme)
-colors = [CF_vermillion, CF_orange, CF_green, CF_sky]
+colors = [CF_green, CF_orange, CF_orange, CF_sky]
 fig = Figure(size = (2400, 1000))
 
-supertitle = fig[1, 1]
+supertitle = fig[1:2, 1]
 Label(
     supertitle,
-    "Yukawa Interaction",
+    "Particle Reflection",
     tellwidth = false,
     tellheight = false,
     font = :latex,
-    fontsize = 40,
+    fontsize = 44,
     valign = :center,
 )
 
-main_grid = fig[2:30, 1] = GridLayout()
-legend_grid = fig[31, 1] = GridLayout()
+main_grid = fig[3:30, 1] = GridLayout()
+legend_grid = fig[31:32, 1] = GridLayout()
 
 deflection_grid = main_grid[1, 1] = GridLayout()
 force_grid = main_grid[2, 1] = GridLayout()
 
 titles = [
-    L"\lambda = 1/2\mathrm{\AA},\,\dot{R} = 5\mathrm{\AA/ps}",
-    L"\lambda = 1\mathrm{\AA},\,\dot{R} = 5\mathrm{\AA/ps}",
-    L"\lambda = 1/2\mathrm{\AA},\,\dot{R} = 2\mathrm{\AA/ps}",
-    L"\lambda = 1\mathrm{\AA},\,\dot{R} = 2\mathrm{\AA/ps}",
+    L"\lambda = 1/5\mathrm{\AA},\,\dot{R}_0 = 10\mathrm{\AA/ps}",
+    L"\lambda = 1/2\mathrm{\AA},\,\dot{R}_0 = 10\mathrm{\AA/ps}",
+    L"\lambda = 1/5\mathrm{\AA},\,\dot{R}_0 = 2\mathrm{\AA/ps}",
+    L"\lambda = 1/2\mathrm{\AA},\,\dot{R}_0 = 2\mathrm{\AA/ps}",
 ]
 
 axs_deflection = [
@@ -163,7 +164,7 @@ for ii = 1:4
     speed = [x[3] for x in speed]
 
     λ = λs[ii]
-    U0 = 2000
+    U0 = 14000
     @inline function U(r)
         res = U0 * exp(-norm(r) / λ) / norm(r)
         return res
@@ -178,70 +179,79 @@ for ii = 1:4
     times = δt .* (0:length(pos_atom)-1)
     # Actual trajectory
     r_eff = pos_atom
-    lines!(axs_deflection[ii], times, pos_atom, linewidth = 4, color = CF_sky)
-    lines!(
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+    lines!(axs_deflection[ii], times, pos_atom, linewidth = 6, color = CF_sky)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_sky)
+
+    hlines!(axs_deflection[ii], [0, maximum(pos_atom)], linewidth = 2, color = CF_red)
+    hlines!(axs_force[ii], [0, minimum(force)], linewidth = 2, color = CF_red)
+
+    text!(
+        axs_deflection[ii],
+        0.2 * maximum(times),
+        maximum(pos_atom),
+        text = string(round(maximum(pos_atom), digits = 4)),
+        align = (:right, :top),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
         axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_sky,
+        0.2 * maximum(times),
+        minimum(force),
+        text = string(round(minimum(force), digits = 2)),
+        align = (:right, :bottom),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
+        axs_deflection[ii],
+        0.1 * maximum(times),
+        0,
+        text = "0",
+        align = (:right, :bottom),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
+        axs_force[ii],
+        0.1 * maximum(times),
+        0,
+        text = "0",
+        align = (:right, :top),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
     )
 
     # Time-local trajectory
     r_eff = T .* U_pr - L .* U_d_pr .* (speed .- 1 .* speed_atom)
-    lines!(axs_deflection[ii], times, r_eff, linewidth = 4, color = CF_vermillion)
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_vermillion,
-    )
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+    lines!(axs_deflection[ii], times, r_eff, linewidth = 6, color = CF_green)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_green)
 
     # Time-local trajectory with framework speed neglected
     r_eff = T .* U_pr - L .* U_d_pr .* (speed .- 0 .* speed_atom)
-    lines!(
-        axs_deflection[ii],
-        times,
-        r_eff,
-        linewidth = 4,
-        color = CF_green,
-        linestyle = :dash,
-    )
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_green,
-        linestyle = :dash,
-    )
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+    lines!(axs_deflection[ii], times, r_eff, linewidth = 6, color = CF_orange)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_orange)
 
     # Set r = rH = 0; ṙ = ṙH = 0
     U_pr = [ForwardDiff.derivative(U, x) for x in pos]
     U_d_pr = [ForwardDiff.derivative(x -> ForwardDiff.derivative(U, x), x) for x in pos]
 
     r_eff = T .* U_pr - L .* U_d_pr .* speed
-    lines!(
-        axs_deflection[ii],
-        times,
-        r_eff,
-        linewidth = 6,
-        color = CF_blue,
-        linestyle = :dot,
-    )
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
 
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 6,
-        color = CF_blue,
-        linestyle = :dot,
-    )
+    lines!(axs_deflection[ii], times, r_eff, linewidth = 6, color = CF_vermillion)
 
-    hlines!(axs_deflection[ii], [0.001], linewidth = 2, color = CF_red)
-    hlines!(axs_force[ii], [-1], linewidth = 2, color = CF_red)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_vermillion)
 
     xlims!(axs_deflection[ii], (0, times[end]))
     xlims!(axs_force[ii], (0, times[end]))
@@ -283,18 +293,18 @@ hideydecorations!.(axs_deflection[1], label = false)
 hideydecorations!.(axs_force[1], label = false)
 
 legs = [
-    LineElement(color = CF_sky, linewidth = 4),
-    LineElement(color = CF_vermillion, linewidth = 4),
-    LineElement(color = CF_green, linestyle = :dash, linewidth = 4),
-    LineElement(color = CF_blue, linestyle = :dot, linewidth = 6),
+    LineElement(color = CF_sky, linewidth = 6),
+    LineElement(color = CF_green, linewidth = 6),
+    LineElement(color = CF_orange, linewidth = 6),
+    LineElement(color = CF_vermillion, linewidth = 6),
 ]
 
 Legend(
     legend_grid[1, 1],
     [legs],
     [[
-        "Full solution",
-        "Time local solution",
+        "Full",
+        "Time local",
         L"Time local, $\dot{r} = 0$",
         L"Time local,  $r = \dot{r} = 0$",
     ]],
@@ -308,6 +318,8 @@ Legend(
     titlevisible = false,
     titleposition = :left,
     titlefont = :latex,
+    labelsize = 44,
 )
 fig
+
 save("Yukawa_Reflection.pdf", fig)

@@ -15,10 +15,10 @@ couplings = cubic_lattice(k1, k2)
 sys = system(size_x, size_y, size_z, couplings)
 
 R_mid = [(size_x + 1) / 2 - 1, (size_y + 1) / 2 - 1, (size_z + 1) / 2 - 1] .* a
-R_edge = [(size_x + 0) / 2 - 1, (size_y + 0) / 2 - 1, (size_z + 1) / 2 - 1] .* a
+R_edge = [(size_x + 0) / 2 - 1, (size_y + 1) / 2 - 1, (size_z + 1) / 2 - 1] .* a
 
 λ = 3 / 4
-U0 = 2000
+U0 = 1000
 
 m_unrelaxed = relaxation(sys, R_mid, λ, U0, 0)
 e_unrelaxed = relaxation(sys, R_edge, λ, U0, 0)
@@ -30,7 +30,7 @@ m_relaxed = relaxation(sys, R_mid, λ, U0, 30)
 e_relaxed = relaxation(sys, R_edge, λ, U0, 30)
 
 diff_relaxed = sum(e_relaxed[1:2]) - sum(m_relaxed[1:2])
-
+# e_relaxed[1:2]|>sum
 
 relaxed = relaxation(sys, R, λ, U0, 30)
 

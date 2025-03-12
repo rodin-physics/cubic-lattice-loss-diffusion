@@ -159,7 +159,7 @@ function Corr_speed(ħ, m, dyn_mat, ΩT, t, disp)
             0.0 .* ones(3),
             2.0 .* π .* ones(3),
             rtol = 1e-3,
-            # initdiv = 20,
+            initdiv = 20,
             atol = 1e-6,
         ) ./ m .* ħ
     return res
@@ -221,7 +221,8 @@ function homogeneous_init(ħ, m, dyn_mat, ΩT, size_x, size_y, size_z)
     # Drop the (0,0,0) momentum
     momenta = momenta[2:end]
 
-    @showprogress for q in momenta
+    for q in momenta
+        # @showprogress for q in momenta
         # Get the eigenvalues and 3-component eigenvectors for each q
         eigs = dyn_mat(q) |> eigen
         ηs = eigs.vectors

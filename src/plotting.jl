@@ -12,7 +12,7 @@ CF_yellow = colorant"rgba(240, 228, 66, 1.0)"
 CF_green = colorant"rgba(0, 158, 115, 1.0)"
 CF_sky = colorant"rgba(86, 180, 233, 1.0)"
 CF_blue = colorant"rgba(0, 114, 178, 1.0)"
-CF_black = colorant"rgba(0, 0, 0, 1.0)"
+CF_black = colorant"rgba(100, 100, 100, 1.0)"
 set_theme!()
 
 CF_theme = Theme(
@@ -21,9 +21,9 @@ CF_theme = Theme(
     figure_padding = 10,
     Axis3 = (
         titlefont = :latex,
-        xgridvisible = false,
-        ygridvisible = false,
-        zgridvisible = false,
+        # xgridvisible = false,
+        # ygridvisible = false,
+        # zgridvisible = false,
         xlabelfont = :latex,
         ylabelfont = :latex,
         zlabelfont = :latex,

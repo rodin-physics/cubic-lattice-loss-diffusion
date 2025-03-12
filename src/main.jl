@@ -11,7 +11,14 @@ using SpecialFunctions
 include("full_approach.jl")
 include("time_local_approach.jl")
 
-dirs = ["Data", "Data/System", "Data/Loss", "Data/Diffusion", "Data/Reflection"]
+dirs = [
+    "Data",
+    "Data/System",
+    "Data/Loss",
+    "Data/Diffusion",
+    "Data/Diffusion_Full",
+    "Data/Reflection",
+]
 [isdir(d) ? nothing : mkdir(d) for d in dirs]
 
 function relaxation(sys, R, λ, U0, nStep)
@@ -25,7 +32,7 @@ function relaxation(sys, R, λ, U0, nStep)
         ] for a in atoms
     ]
     @inline function U(r)
-        res = U0 * exp(-dot(r, r) / 2 / λ^2)
+        res = U0 * exp(-norm(r) / λ) / norm(r)
         return res
     end
 
