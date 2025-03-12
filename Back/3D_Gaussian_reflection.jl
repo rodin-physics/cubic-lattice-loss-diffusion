@@ -37,7 +37,7 @@ sys = system(size_x, size_y, size_z, couplings)
 # Simulation parameters
 speeds = [2, 5]
 λs = [3 / 8, 3 / 4]
-Us = [2000]
+Us = [14000]
 
 params = [(s, λ, U0) for s in speeds, λ in λs, U0 in Us] |> vec
 
@@ -104,10 +104,10 @@ T = diag(W_mat) |> mean
 L = diag(loss_mat) |> mean
 
 data = [
-    "Data/Reflection/Full_Reflection_U2000_λ0.375_init_speed5.jld2",
-    "Data/Reflection/Full_Reflection_U2000_λ0.75_init_speed5.jld2",
-    "Data/Reflection/Full_Reflection_U2000_λ0.375_init_speed2.jld2",
-    "Data/Reflection/Full_Reflection_U2000_λ0.75_init_speed2.jld2",
+    "Data/Reflection/Full_Reflection_U14000_λ0.375_init_speed5.jld2",
+    "Data/Reflection/Full_Reflection_U14000_λ0.75_init_speed5.jld2",
+    "Data/Reflection/Full_Reflection_U14000_λ0.375_init_speed2.jld2",
+    "Data/Reflection/Full_Reflection_U14000_λ0.75_init_speed2.jld2",
 ]
 
 λs = [3 / 8, 3 / 4, 3 / 8, 3 / 4]
@@ -116,19 +116,19 @@ set_theme!(CF_theme)
 colors = [CF_vermillion, CF_orange, CF_green, CF_sky]
 fig = Figure(size = (2400, 1000))
 
-supertitle = fig[1, 1]
+supertitle = fig[1:2, 1]
 Label(
     supertitle,
     "Gaussian Interaction",
     tellwidth = false,
     tellheight = false,
     font = :latex,
-    fontsize = 40,
+    fontsize = 44,
     valign = :center,
 )
 
-main_grid = fig[2:30, 1] = GridLayout()
-legend_grid = fig[31, 1] = GridLayout()
+main_grid = fig[3:30, 1] = GridLayout()
+legend_grid = fig[31:32, 1] = GridLayout()
 
 deflection_grid = main_grid[1, 1] = GridLayout()
 force_grid = main_grid[2, 1] = GridLayout()
@@ -162,7 +162,7 @@ for ii = 1:4
     speed = [x[3] for x in speed]
 
     λ = λs[ii]
-    U0 = 2000
+    U0 = 14000
     @inline function U(r)
         res = U0 * exp(-dot(r, r) / 2 / λ^2)
         return res
@@ -177,70 +177,93 @@ for ii = 1:4
     times = δt .* (0:length(pos_atom)-1)
     # Actual trajectory
     r_eff = pos_atom
-    lines!(axs_deflection[ii], times, pos_atom, linewidth = 4, color = CF_sky)
-    lines!(
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+    lines!(axs_deflection[ii], times, pos_atom, linewidth = 6, color = CF_sky)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_sky)
+
+    hlines!(axs_deflection[ii], [0, maximum(pos_atom)], linewidth = 2, color = CF_red)
+    hlines!(axs_force[ii], [0, minimum(force)], linewidth = 2, color = CF_red)
+
+    text!(
+        axs_deflection[ii],
+        0.2 * maximum(times),
+        maximum(pos_atom),
+        text = string(round(maximum(pos_atom), digits = 4)),
+        align = (:right, :top),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
         axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_sky,
+        0.2 * maximum(times),
+        minimum(force),
+        text = string(round(minimum(force), digits = 2)),
+        align = (:right, :bottom),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
+        axs_deflection[ii],
+        0.1 * maximum(times),
+        0,
+        text = "0",
+        align = (:right, :bottom),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
+    )
+
+    text!(
+        axs_force[ii],
+        0.1 * maximum(times),
+        0,
+        text = "0",
+        align = (:right, :top),
+        fontsize = 36,
+        font = :latex,
+        color = :black,
     )
 
     # Time-local trajectory
     r_eff = T .* U_pr - L .* U_d_pr .* (speed .- 1 .* speed_atom)
-    lines!(axs_deflection[ii], times, r_eff, linewidth = 4, color = CF_vermillion)
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_vermillion,
-    )
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+    lines!(axs_deflection[ii], times, r_eff, linewidth = 6, color = CF_vermillion)
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_vermillion)
 
     # Time-local trajectory with framework speed neglected
     r_eff = T .* U_pr - L .* U_d_pr .* (speed .- 0 .* speed_atom)
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
     lines!(
         axs_deflection[ii],
         times,
         r_eff,
-        linewidth = 4,
+        linewidth = 6,
         color = CF_green,
         linestyle = :dash,
     )
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 4,
-        color = CF_green,
-        linestyle = :dash,
-    )
+    lines!(axs_force[ii], times, force, linewidth = 6, color = CF_green, linestyle = :dash)
 
     # Set r = rH = 0; ṙ = ṙH = 0
     U_pr = [ForwardDiff.derivative(U, x) for x in pos]
     U_d_pr = [ForwardDiff.derivative(x -> ForwardDiff.derivative(U, x), x) for x in pos]
 
     r_eff = T .* U_pr - L .* U_d_pr .* speed
+    force = [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)]
+
     lines!(
         axs_deflection[ii],
         times,
         r_eff,
-        linewidth = 6,
+        linewidth = 10,
         color = CF_blue,
         linestyle = :dot,
     )
 
-    lines!(
-        axs_force[ii],
-        times,
-        [-ForwardDiff.derivative(U, x) for x in (pos .- r_eff)],
-        linewidth = 6,
-        color = CF_blue,
-        linestyle = :dot,
-    )
-
-    hlines!(axs_deflection[ii], [0.001], linewidth = 2, color = CF_red)
-    hlines!(axs_force[ii], [-1], linewidth = 2, color = CF_red)
+    lines!(axs_force[ii], times, force, linewidth = 10, color = CF_blue, linestyle = :dot)
 
     xlims!(axs_deflection[ii], (0, times[end]))
     xlims!(axs_force[ii], (0, times[end]))
@@ -282,18 +305,18 @@ hideydecorations!.(axs_deflection[1], label = false)
 hideydecorations!.(axs_force[1], label = false)
 
 legs = [
-    LineElement(color = CF_sky, linewidth = 4),
-    LineElement(color = CF_vermillion, linewidth = 4),
-    LineElement(color = CF_green, linestyle = :dash, linewidth = 4),
-    LineElement(color = CF_blue, linestyle = :dot, linewidth = 6),
+    LineElement(color = CF_sky, linewidth = 6),
+    LineElement(color = CF_vermillion, linewidth = 6),
+    LineElement(color = CF_green, linestyle = :dash, linewidth = 6),
+    LineElement(color = CF_blue, linestyle = :dot, linewidth = 10),
 ]
 
 Legend(
     legend_grid[1, 1],
     [legs],
     [[
-        "Full solution",
-        "Time local solution",
+        "Full",
+        "Time local",
         L"Time local, $\dot{r} = 0$",
         L"Time local,  $r = \dot{r} = 0$",
     ]],
@@ -307,6 +330,27 @@ Legend(
     titlevisible = false,
     titleposition = :left,
     titlefont = :latex,
+    labelsize = 44,
 )
 fig
 save("Gaussian_Reflection.pdf", fig)
+
+
+# #  d = load_object("Data/Reflection/Full_Reflection_U14000_λ0.375_init_speed5.jld2")
+# #  d[1]|>maximum
+
+#  pos_atom, speed_atom, pos, speed = load_object(data[1])
+#  pos_atom = [x[3] for x in pos_atom]
+#  pos = [x[3] for x in pos]
+# #  maximum(pos_atom)
+
+# U0 = 14000
+# λ = 3/8
+# @inline function U(r)
+#     res = U0 * exp(-dot(r, r) / 2 / λ^2)
+#     return res
+# end
+
+# [U(x) for x in pos .- pos_atom]|> findmax
+
+# pos[68]-pos_atom[68]
