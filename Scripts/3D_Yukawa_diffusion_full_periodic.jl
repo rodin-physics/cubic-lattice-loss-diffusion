@@ -1,7 +1,7 @@
 using Random
 include("../src/main.jl")
 include("../src/plotting.jl")
-
+Random.seed!(150)
 ## PARAMETERS
 M = 0.7                     # Mass of the particle in meV * (ps / Å)²
 a = 3                       # Lattice constant in Å
@@ -12,9 +12,8 @@ m = 3.5                     # Lattice mass in meV * (ps / Å)²
 
 # Simulation parameters
 δt = 5e-3                   # Time step in ps
-t_max = 6                  # Time in ps
+t_max = 3000                # Time in ps
 nPts = floor(t_max / δt) |> Int
-n_traj = 250
 extent = 1                  # Interaction length
 # LATTICE
 size_x = size_y = size_z = 30
@@ -54,14 +53,13 @@ U0s = [4000, 8000]
 
 # params = [(x, 4000) for x in [25, 30]]
 params = [(x, 4000) for x in [10, 15, 20, 25, 30, 40, 50]]
-system_atoms = Iterators.product([1:size_x, 1:size_y, 1:size_z]...) |> collect |> vec
+
 for par in params
-    Random.seed!(150)
     ħΩT = par[1]
     U0 = par[2]
 
     if !isfile(
-        "Data/Diffusion_Full/Yukawa_Diffusion_Full_U0$(U0)_λ$(λ)_ħΩT$(ħΩT)_size$(size_x).jld2",
+        "Data/Diffusion_Full_Periodic/Yukawa_Diffusion_Full_Periodic_U0$(U0)_λ$(λ)_ħΩT$(ħΩT)_size$(size_x).jld2",
     )
 
         @inline function U(r)
@@ -73,31 +71,36 @@ for par in params
 
         # Calculate n_traj trajectories
 
-        pos_particle =
-            Vector{Union{Nothing,Float64}}[[nothing, nothing, nothing] for _ = 1:nPts]
-        speed_particle =
-            Vector{Union{Nothing,Float64}}[[nothing, nothing, nothing] for _ = 1:nPts]
-
-        ensemble_pos = [pos_particle for _ = 1:n_traj]
-        ensemble_speed = [speed_particle for _ = 1:n_traj]
+        pos_particle = Vector{Vector{Float64}}(undef, nPts)
+        speed_particle = Vector{Vector{Float64}}(undef, nPts)
+        pos_particle[1] = R
+        speed_particle[1] = R_dot
 
         println(ΩT)
         println(U0)
-        # pr = Progress(n_traj)
-        for traj = 1:n_traj
-            # println(traj)
-            r_init, r_dot_init = homogeneous_init(ħ, m, dyn_mat, ΩT, size_x, size_y, size_z)
+        r_init, r_dot_init = homogeneous_init(ħ, m, dyn_mat, ΩT, size_x, size_y, size_z)
 
-            pos_particle =
-                Vector{Union{Nothing,Float64}}[[nothing, nothing, nothing] for _ = 1:nPts]
-            speed_particle =
-                Vector{Union{Nothing,Float64}}[[nothing, nothing, nothing] for _ = 1:nPts]
-            pos_particle[1] = R
-            speed_particle[1] = R_dot
+        current_state = (r_init, r_dot_init, R, R_dot)
 
-            current_state = (r_init, r_dot_init, R, R_dot)
+        pos = ceil.(Int, (pos_particle[1] ./ a))
+        atoms =
+            Iterators.product(
+                [
+                    pos[1]+1-extent:pos[1]+extent,
+                    pos[2]+1-extent:pos[2]+extent,
+                    pos[3]+1-extent:pos[3]+extent,
+                ]...,
+            ) |>
+            collect |>
+            vec
+        atoms = [mod1.(atom, size_x) for atom in atoms]
+        @showprogress for ii = 2:nPts
+            current_state = RKstep(m, M, a, sys, atoms, U, current_state, δt)
+            pos_particle[ii] = current_state[3]
+            speed_particle[ii] = current_state[4]
 
-            pos = ceil.(Int, (pos_particle[1] ./ a))
+            pos = ceil.(Int, (pos_particle[ii] ./ a))
+
             atoms =
                 Iterators.product(
                     [
@@ -108,38 +111,14 @@ for par in params
                 ) |>
                 collect |>
                 vec
-            @showprogress for ii = 2:nPts
-                current_state = RKstep(m, M, a, sys, atoms, U, current_state, δt)
-                pos_particle[ii] = current_state[3]
-                speed_particle[ii] = current_state[4]
 
-                pos = ceil.(Int, (pos_particle[ii] ./ a))
-
-                atoms =
-                    Iterators.product(
-                        [
-                            pos[1]+1-extent:pos[1]+extent,
-                            pos[2]+1-extent:pos[2]+extent,
-                            pos[3]+1-extent:pos[3]+extent,
-                        ]...,
-                    ) |>
-                    collect |>
-                    vec
-                # We might end up outside the system
-                if prod(atom in system_atoms for atom in atoms) == 0
-                    break
-                end
-                GC.safepoint()
-            end
-            # println("Saving")
-            ensemble_pos[traj] = pos_particle
-            ensemble_speed[traj] = speed_particle
-            # next!(pr)
+            atoms = [mod1.(atom, size_x) for atom in atoms]
+            GC.safepoint()
         end
 
         save_object(
             "Data/Diffusion_Full/Yukawa_Diffusion_Full_U0$(U0)_λ$(λ)_ħΩT$(ħΩT)_size$(size_x).jld2",
-            (ensemble_pos, ensemble_speed),
+            (pos_particle, speed_particle),
         )
     end
 
