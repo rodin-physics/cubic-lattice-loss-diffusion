@@ -17,6 +17,7 @@ dirs = [
     "Data/Loss",
     "Data/Diffusion",
     "Data/Diffusion_Full",
+    "Data/Diffusion_Full_Periodic",
     "Data/Reflection",
 ]
 [isdir(d) ? nothing : mkdir(d) for d in dirs]
