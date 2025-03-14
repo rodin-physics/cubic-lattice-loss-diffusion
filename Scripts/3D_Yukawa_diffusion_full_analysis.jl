@@ -178,3 +178,7 @@ save("Diffusivity_Full.pdf", fig)
 
 # confidence_interval(fit, 0.05)[1] .- ps[1]
 # confidence_interval(fit, 0.05)[2] .- ps[2]
+
+
+# tt = load_object("Data/Diffusion_Full_Periodic/Yukawa_Diffusion_Full_Periodic_U04000_λ0.5_ħΩT50_size20.jld2")
+# tt[6]

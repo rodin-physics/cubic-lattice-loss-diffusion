@@ -12,11 +12,11 @@ m = 3.5                     # Lattice mass in meV * (ps / Å)²
 
 # Simulation parameters
 δt = 5e-3                   # Time step in ps
-t_max = 3000                # Time in ps
+t_max = 30                  # Time in ps
 nPts = floor(t_max / δt) |> Int
 extent = 1                  # Interaction length
 # LATTICE
-size_x = size_y = size_z = 30
+size_x = size_y = size_z = 20
 
 momenta =
     Iterators.product(
@@ -51,8 +51,8 @@ U0s = [4000, 8000]
 
 λ = 1 / 2
 
-# params = [(x, 4000) for x in [25, 30]]
-params = [(x, 4000) for x in [10, 15, 20, 25, 30, 40, 50]]
+params = [(x, 4000) for x in [50]]
+# params = [(x, 4000) for x in [10, 15, 20, 25, 30, 40, 50]]
 
 for par in params
     ħΩT = par[1]
@@ -82,43 +82,52 @@ for par in params
 
         current_state = (r_init, r_dot_init, R, R_dot)
 
-        pos = ceil.(Int, (pos_particle[1] ./ a))
-        atoms =
-            Iterators.product(
-                [
-                    pos[1]+1-extent:pos[1]+extent,
-                    pos[2]+1-extent:pos[2]+extent,
-                    pos[3]+1-extent:pos[3]+extent,
-                ]...,
-            ) |>
-            collect |>
-            vec
-        atoms = [mod1.(atom, size_x) for atom in atoms]
+        # pos = ceil.(Int, (pos_particle[1] ./ a))
+        # atoms =
+        #     Iterators.product(
+        #         [
+        #             pos[1]+1-extent:pos[1]+extent,
+        #             pos[2]+1-extent:pos[2]+extent,
+        #             pos[3]+1-extent:pos[3]+extent,
+        #         ]...,
+        #     ) |>
+        #     collect |>
+        #     vec
+        # atoms = [mod1.(atom, size_x) for atom in atoms]
         @showprogress for ii = 2:nPts
-            current_state = RKstep(m, M, a, sys, atoms, U, current_state, δt)
+            # RKstep_periodic(m, M, a, sys, U, current_state, δt)
+            current_state = RKstep_periodic(m, M, a, sys, U, current_state, δt)
+            # current_state = RKstep_periodic(m, M, a, sys, atoms, U, current_state, δt)
             pos_particle[ii] = current_state[3]
             speed_particle[ii] = current_state[4]
-
-            pos = ceil.(Int, (pos_particle[ii] ./ a))
-
-            atoms =
-                Iterators.product(
-                    [
-                        pos[1]+1-extent:pos[1]+extent,
-                        pos[2]+1-extent:pos[2]+extent,
-                        pos[3]+1-extent:pos[3]+extent,
-                    ]...,
-                ) |>
-                collect |>
-                vec
-
-            atoms = [mod1.(atom, size_x) for atom in atoms]
+            # Get the unit cell in which the particle currently is
+            # pos = ceil.(Int, (pos_particle[ii] ./ a))
+            # # The the framework atoms bounding the unit cell
+            # atoms =
+            #     Iterators.product(
+            #         [
+            #             pos[1]+1-extent:pos[1]+extent,
+            #             pos[2]+1-extent:pos[2]+extent,
+            #             pos[3]+1-extent:pos[3]+extent,
+            #         ]...,
+            #     ) |>
+            #     collect |>
+            #     vec
+            # # Fold the atoms back into the finite size system
+            # atoms = [mod1.(atom, size_x) for atom in atoms]
             GC.safepoint()
         end
 
         save_object(
-            "Data/Diffusion_Full/Yukawa_Diffusion_Full_U0$(U0)_λ$(λ)_ħΩT$(ħΩT)_size$(size_x).jld2",
-            (pos_particle, speed_particle),
+            "Data/Diffusion_Full_Periodic/Yukawa_Diffusion_Full_Periodic_U0$(U0)_λ$(λ)_ħΩT$(ħΩT)_size$(size_x).jld2",
+            (
+                pos_particle,
+                speed_particle,
+                r_init,
+                r_dot_init,
+                current_state[1],
+                current_state[2],
+            ),
         )
     end
 
