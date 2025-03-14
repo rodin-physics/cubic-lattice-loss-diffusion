@@ -9,6 +9,7 @@ using SparseArrays
 using SpecialFunctions
 
 include("full_approach.jl")
+include("full_approach_periodic.jl")
 include("time_local_approach.jl")
 
 dirs = [

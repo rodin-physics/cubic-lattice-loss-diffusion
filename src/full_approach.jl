@@ -56,7 +56,7 @@ function derivatives(m, M, a, index, V, atoms, U, r, rdot, R, Rdot)
         ] for a in atoms
     ]
 
-    # Get the equilibrium positions of each atom in 'atoms'. Atom (1,1,1) is at the origin
+    # Get the positions of each atom in 'atoms'. Atom (1,1,1) is at the origin
     atom_positions = [r[atom_indices[n]] .+ (atoms[n] .- 1) .* a for n in eachindex(atoms)]
 
     # Calculate the negative gradient of the interaction with each atom in 'atoms'
